@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     public float moveSpeed = 5f;
-    public float mouseSensitivity = 2f;
+    public float mouseSensitivity = 0.2f;
     public Transform cameraTransform;
 
     private Rigidbody rb;

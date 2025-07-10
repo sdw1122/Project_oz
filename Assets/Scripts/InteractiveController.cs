@@ -8,16 +8,9 @@ public class InteractiveController : MonoBehaviour
     public LayerMask interactLayer;     // 상호작용 오브젝트 레이어
     public GameObject interactionUI;    // "상호작용 E" UI 오브젝트
 
-    //public Material targetMaterial;
-    //public float opaqueValue = 1f; //투명 0, 불투명 1
-    //public float transparentValue = 0f; // 투명 0, 불투명 1
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        // 시작 시 투명 + 윤곽선 미표시로 초기화
-        //SetOpaque(false);
-        //SetOutline(false);
+
     }
 
     // Update is called once per frame
@@ -42,17 +35,4 @@ public class InteractiveController : MonoBehaviour
             interactionUI.SetActive(false);
         }
     }
-
-    // 투명/불투명 상태 전환 함수
-    //public void SetOpaque(bool isOpaque)
-    //{
-    //    targetMaterial.SetFloat("_IsOpaque", isOpaque ? opaqueValue : transparentValue);
-    //}
-
-    //// 윤곽선 표시/숨김 함수
-    //public void SetOutline(bool show)
-    //{
-    //    targetMaterial.SetFloat("_ShowOutline", show ? 1f : 0f);
-    //}
-
 }
