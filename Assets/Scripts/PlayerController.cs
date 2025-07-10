@@ -13,6 +13,10 @@ public class PlayerController : MonoBehaviour
     private Vector2 lookInput;
     private float xRotation = 0f;
 
+    public float jumpForce = 5f;
+    private bool isGrounded = false; // 땅에 닿아있는지 여부
+    private int groundContactCount = 0; // 여러 지면 접촉을 처리
+
     public void OnMove(InputValue value)
     {
         moveInput = value.Get<Vector2>();
@@ -21,6 +25,37 @@ public class PlayerController : MonoBehaviour
     public void OnLook(InputValue value)
     {
         lookInput = value.Get<Vector2>();
+    }
+
+    public void OnJump(InputValue value)
+    {
+        if (value.isPressed && isGrounded)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            isGrounded = false; // 점프하면 공중 상태로 변경
+        }
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            groundContactCount++;
+            isGrounded = true;
+        }
+    }
+
+    void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            groundContactCount--;
+            if (groundContactCount <= 0)
+            {
+                isGrounded = false;
+                groundContactCount = 0;
+            }
+        }
     }
 
     void Start()
@@ -53,5 +88,9 @@ public class PlayerController : MonoBehaviour
 
         Vector3 move = forward * moveInput.y + right * moveInput.x;
         rb.AddForce(move * moveSpeed, ForceMode.Acceleration);
+    }
+    public bool IsGrounded()
+    {
+        return isGrounded;
     }
 }

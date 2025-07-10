@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 public class Hammer : MonoBehaviour
 {
     Rigidbody rb;
+    private PlayerController playerController;
 
     public GameObject weapon;    
     public float damage = 40f;
@@ -12,6 +13,8 @@ public class Hammer : MonoBehaviour
     private float skill1HoldTime = 0;
     public float skill1CoolDown; //10초
     public float skill2 = 60f;
+    private float skill2CoolDown = 18f;         // Skill2 쿨타임(초)
+    public float skill2CoolDownTimer = 18f;    // 현재 쿨타임 진행상태(초)
 
     private InputSystem_Actions controls;
     private bool skill1Pressed = false;
@@ -28,13 +31,14 @@ public class Hammer : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        playerController = GetComponent<PlayerController>();
         controls = new InputSystem_Actions();
         skill1CoolDown = 10f;
 
         // Skill1 시작(누름)
         controls.Player.Skill1.started += ctx =>
         {
-            if (skill1CoolDown >= 10f)
+            if (skill1CoolDown >= 10f && playerController.IsGrounded())
             {
                 skill1Pressed = true;
             }
@@ -44,7 +48,7 @@ public class Hammer : MonoBehaviour
         // Skill1 해제(뗌)
         controls.Player.Skill1.canceled += ctx =>
         {
-            if (skill1Pressed)
+            if (skill1Pressed && playerController.IsGrounded())
             {
                 skill1Pressed = false;
                 rb.constraints = RigidbodyConstraints.FreezeRotation;
@@ -67,7 +71,11 @@ public class Hammer : MonoBehaviour
         // Skill2 (Q키)
         controls.Player.Skill2.performed += ctx =>
         {
-            Skill2();
+            if (skill2CoolDownTimer >= skill2CoolDown && playerController.IsGrounded())
+            {
+                Skill2();
+                skill2CoolDownTimer = 0f; // 쿨타임 시작
+            }
         };
     }
 
@@ -96,6 +104,13 @@ public class Hammer : MonoBehaviour
         else if (skill1CoolDown >= 10f)
         {
             skill1CoolDown = 10f;
+        }
+
+        if (skill2CoolDownTimer < skill2CoolDown)
+        {
+            skill2CoolDownTimer += Time.deltaTime;
+            if (skill2CoolDownTimer > skill2CoolDown)
+                skill2CoolDownTimer = skill2CoolDown;
         }
 
         // 공격 입력(마우스 좌클릭)
