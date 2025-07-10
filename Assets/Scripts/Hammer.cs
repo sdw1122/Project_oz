@@ -1,4 +1,5 @@
 using System.Threading;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,9 +10,16 @@ public class Hammer : MonoBehaviour
 
     public GameObject weapon;    
     public float damage = 40f;
+
+    private bool isAttackButtonPressed = false;
+    private float attackDelay = 1.0f;
+    private float attackTimer = 0f;
+    private float delayTimer = 0f;
+
     public float skill1;
     private float skill1HoldTime = 0;
     public float skill1CoolDown; //10초
+
     public float skill2 = 60f;
     private float skill2CoolDown = 18f;         // Skill2 쿨타임(초)
     public float skill2CoolDownTimer = 18f;    // 현재 쿨타임 진행상태(초)
@@ -21,10 +29,6 @@ public class Hammer : MonoBehaviour
 
     private bool isAttacking = false;      // 공격 중 여부
     private int attackStep = 1;            // 1: 왼쪽, 2: 오른쪽
-    private float attackTimer = 0f;        // 현재 공격 진행 시간
-    private float attackDuration = 0.4f;   // 휘두르는 애니메이션 시간
-    private float attackDelay = 1.0f;      // 공격 간 딜레이(초)
-    private float delayTimer = 0f;         // 딜레이 카운트
     private float timeSinceLastAttack = 0f;// 마지막 공격 이후 경과 시간
     private bool canAttack = true;         // 공격 가능 여부
 
@@ -34,6 +38,10 @@ public class Hammer : MonoBehaviour
         playerController = GetComponent<PlayerController>();
         controls = new InputSystem_Actions();
         skill1CoolDown = 10f;
+
+        //기본 공격
+        controls.Player.Attack.started += ctx => isAttackButtonPressed = true;
+        controls.Player.Attack.canceled += ctx => isAttackButtonPressed = false;
 
         // Skill1 시작(누름)
         controls.Player.Skill1.started += ctx =>
@@ -54,7 +62,12 @@ public class Hammer : MonoBehaviour
                 rb.constraints = RigidbodyConstraints.FreezeRotation;
                 skill1 = 0;
                 if (skill1HoldTime < 1)
+                {
                     skill1 = 0;
+                    skill1CoolDown = 5f;
+                    skill1HoldTime = 0f;
+                    return;
+                }
                 else if (skill1HoldTime < 2)
                     skill1 = damage * 2;
                 else if (skill1HoldTime < 3)
@@ -113,41 +126,49 @@ public class Hammer : MonoBehaviour
                 skill2CoolDownTimer = skill2CoolDown;
         }
 
-        // 공격 입력(마우스 좌클릭)
-        if (canAttack && Mouse.current.leftButton.wasPressedThisFrame)
+        // 버튼을 누르고 있는 동안만 타이머 증가
+        if (isAttackButtonPressed && playerController.IsGrounded())
         {
-            // 2초 이상 공격 안 했으면 1타로 초기화
-            if (timeSinceLastAttack >= 2f)
-                attackStep = 1;
-
-            isAttacking = true;
-            attackTimer = 0f;
-            canAttack = false;
-
-            // 데미지 즉시 적용
-            DealDamageInSwing();
-
-            // 다음 공격 스텝으로 전환
-            attackStep = (attackStep == 1) ? 2 : 1;
-
-            // 타이머 초기화
-            timeSinceLastAttack = 0f;
-            delayTimer = 0f;
-        }
-
-        // 공격 딜레이 관리
-        if (!canAttack)
-        {
-            delayTimer += Time.deltaTime;
-            if (delayTimer >= attackDelay)
+            attackTimer += Time.deltaTime;
+            if (attackTimer >= attackDelay)
             {
-                canAttack = true;
+                Attack();
+                attackTimer = 0f;
             }
+        }
+        else
+        {
+            // 버튼을 뗐거나 공중이면, 쿨타임이 끝날 때까지 공격 불가
+            attackTimer = Mathf.Min(attackTimer + Time.deltaTime, attackDelay);
         }
 
         // 마지막 공격 이후 시간 업데이트
         if (!isAttacking)
             timeSinceLastAttack += Time.deltaTime;
+    }
+
+    private void Attack()
+    {
+        if (!canAttack || !playerController.IsGrounded())
+            return;
+
+        // 2초 이상 공격 안 했으면 1타로 초기화
+        if (timeSinceLastAttack >= 2f)
+            attackStep = 1;
+
+        // 애니메이션 필요
+        //isAttacking = true;
+        //attackTimer = 0f;
+        //canAttack = false;
+
+        // 데미지 즉시 적용
+        DealDamageInSwing();
+
+        // 다음 공격 스텝으로 전환
+        attackStep = (attackStep == 1) ? 2 : 1;
+
+        // 타이머 초기화
+        timeSinceLastAttack = 0f;
     }
 
     void Skill1(float damage)
@@ -211,7 +232,7 @@ public class Hammer : MonoBehaviour
     {
         // 해머 위치 기준 범위 감지(예시)
         Vector3 swingCenter = weapon.transform.position + weapon.transform.forward * (weapon.transform.localScale.z / 2f);
-        Vector3 halfExtents = weapon.transform.localScale / 2f;
+        Vector3 halfExtents = (weapon.transform.localScale / 2f) * 2f;
         Quaternion orientation = weapon.transform.rotation;
         int layerMask = LayerMask.GetMask("Enemy");
 
@@ -286,7 +307,7 @@ public class Hammer : MonoBehaviour
             Gizmos.color = new Color(1f, 0.8f, 0.2f, 0.4f); // 노란색 반투명
             Matrix4x4 rotationMatrix = Matrix4x4.TRS(swingCenter, orientation, Vector3.one);
             Gizmos.matrix = rotationMatrix;
-            Gizmos.DrawCube(Vector3.zero, halfExtents * 2);
+            Gizmos.DrawCube(Vector3.zero, halfExtents * 4);
             Gizmos.matrix = Matrix4x4.identity; // 매트릭스 원복
         }
     }
